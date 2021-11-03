@@ -12,10 +12,15 @@ ENV KUSTOMIZE_URL=https://github.com/kubernetes-sigs/kustomize/releases/download
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl && \
     chmod +x kubectl
 RUN if [ "${ARCH}" = "amd64" ]; then ARCH=x86_64; fi && \
-    curl -sfL https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_${ARCH}.tar.gz | tar xvzf -
+        curl -sfL https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_${ARCH}.tar.gz | tar xvzf -
+RUN if [ "${ARCH}" = "s390x" ]; then \
+        curl -L https://github.com/Anarkis/k9s/releases/download/v0.24.15-s390x/k9s; \
+    fi
 RUN if [ "${ARCH}" = "amd64" ] || [ "${ARCH}" = "arm64" ]; then \
-    curl -sLf ${KUSTOMIZE_URL} | tar -xzf - && chmod +x kustomize; \
-  fi
+        curl -sLf ${KUSTOMIZE_URL} | tar -xzf - && chmod +x kustomize; \
+    elif [ "${ARCH}" = "s390x" ]; then \
+        curl -OL https://github.com/ivan-claire/kustomize/releases/download/v4.4.0-s390x/kustomize && chmod +x kustomize; \
+    fi
 
 FROM alpine:3.12
 RUN apk add -U --no-cache bash bash-completion jq
@@ -31,7 +36,7 @@ RUN echo 'shell:x:1000:1000:shell,,,:/home/shell:/bin/bash' > /etc/passwd && \
     chown -R shell /home/shell && \
     chmod 700 /run
 COPY --from=helm ./helm/bin/helm /usr/local/bin/
-COPY --from=build /kubectl /k9s ./kustomize /usr/local/bin/
+COPY --from=build /kubectl /k9s ./kustomize* /usr/local/bin/
 COPY package/helm-cmd package/welcome /usr/local/bin/
 COPY kustomize.sh /home/shell/
 USER 1000
